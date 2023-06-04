@@ -1,0 +1,115 @@
+import argparse
+import json
+import yaml
+import xml.etree.ElementTree as ET
+from tkinter import Tk, Button, Label, filedialog
+from threading import Thread
+import asyncio
+
+def parse_arguments():
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--input", help="Input file path")
+    parser.add_argument("--output", help="Output file path")
+    args = parser.parse_args()
+    return args
+
+def load_json(file_path):
+    with open(file_path, "r") as file:
+        try:
+            data = json.load(file)
+            return data
+        except json.JSONDecodeError:
+            print("Error: Invalid JSON syntax")
+            return None
+
+def save_json(data, file_path):
+    with open(file_path, "w") as file:
+        json.dump(data, file)
+
+def load_yaml(file_path):
+    with open(file_path, "r") as file:
+        try:
+            data = yaml.safe_load(file)
+            return data
+        except yaml.YAMLError:
+            print("Error: Invalid YAML syntax")
+            return None
+def save_yaml(data, file_path):
+    with open(file_path, "w") as file:
+        yaml.safe_dump(data, file)
+def load_xml(file_path):
+    try:
+        tree = ET.parse(file_path)
+        root = tree.getroot()
+        return root
+    except ET.ParseError:
+        print("Error: Invalid XML syntax")
+        return None
+def save_xml(root, file_path):
+    tree = ET.ElementTree(root)
+    tree.write(file_path)
+class App:
+    def __init__(self, master):
+        self.master = master
+        master.title("File Converter")
+        self.label = Label(master, text="Wybierz plik wejściowy:")
+        self.label.pack()
+        self.button = Button(master, text="Wybierz", command=self.select_file)
+        self.button.pack()
+
+    def select_file(self):
+        file_path = filedialog.askopenfilename(filetypes=[("All Files", "*.*")])
+        if file_path:
+            self.convert_file(file_path)
+
+    def convert_file(self, file_path):
+
+        data = load_json(file_path)
+        if data:
+       
+            save_json(data, "output.json")
+            print("Plik JSON został zapisany.")
+
+def load_and_save_async(file_path):
+    loop = asyncio.get_event_loop()
+    tasks = [
+        loop.run_in_executor(None, load_json, file_path),
+        loop.run_in_executor(None, load_yaml, file_path),
+        loop.run_in_executor(None, load_xml, file_path)
+    ]
+    results = loop.run_until_complete(asyncio.gather(*tasks))
+    yaml_file_path = "output.yml"
+    loop.run_in_executor(None, save_yaml, results[1], yaml_file_path)
+    print(f"Plik YAML został zapisany asynchronicznie: {yaml_file_path}")
+    xml_file_path = "output.xml"
+    loop.run_in_executor(None, save_xml, results[2], xml_file_path)
+    print(f"Plik XML został zapisany asynchronicznie: {xml_file_path}")
+
+if __name__ == "__main__":
+    # Task0: Utworzenie skryptu installResources.ps1
+    # W tym przykładzie zakładamy, że skrypt installResources.ps1 zawiera komendy PIP do instalacji wymaganych pakietów.
+
+    # Task1: Parsowanie argumentów
+    args = parse_arguments()
+
+    if args.input:
+        data = load_json(args.input)
+        if data:
+            # Task3: Zapis danych do pliku
+            save_json(data, args.output)
+            print("Dane zostały zapisane.")
+    yaml_data = {"key": "value"}
+    save_yaml(yaml_data, "data.yaml")
+    loaded_yaml_data = load_yaml("data.yaml")
+    print(loaded_yaml_data)
+    xml_root = ET.Element("root")
+    xml_tree = ET.ElementTree(xml_root)
+    xml_root.text = "Hello, XML!"
+    save_xml(xml_root, "data.xml")
+    loaded_xml_root = load_xml("data.xml")
+    print(loaded_xml_root.text)
+    root = Tk()
+    app = App(root)
+    root.mainloop()
+    file_path = "data.json"
+    load_and_save_async(file_path)
